@@ -1,0 +1,23 @@
+# Build directories
+build/
+build-*/
+cmake-build-*/
+.cache/
+bin/
+obj/
+releases/
+*.o
+*.a
+*.elf
+*.exe
+*.ipa
+*.app
+*.dSYM/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+DerivedData/
+.DS_Store
+Thumbs.db
