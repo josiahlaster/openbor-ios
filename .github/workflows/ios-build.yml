@@ -1,0 +1,149 @@
+name: OpenBOR iOS Build Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      build_configuration:
+        description: 'Build Configuration (Release or Debug)'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
+
+jobs:
+  build-ios:
+    name: Build OpenBOR iOS (ARM64)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Install System Build Dependencies
+        run: |
+          brew install cmake ninja
+
+      - name: Setup SDL2 for iOS
+        run: |
+          echo "Fetching SDL2 2.30.12 for iOS..."
+          curl -sSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.12/SDL2-2.30.12.tar.gz -o SDL2.tar.gz
+          tar -xzf SDL2.tar.gz
+          cd SDL2-2.30.12
+
+          echo "Compiling SDL2 iOS static library..."
+          mkdir -p build-ios && cd build-ios
+          cmake .. \
+            -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE=../../cmake/ios.toolchain.cmake \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DSDL_STATIC=ON \
+            -DSDL_SHARED=OFF \
+            -DSDL_TEST=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+
+          xcodebuild -project SDL2.xcodeproj \
+            -scheme SDL2-static \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+          cd ../..
+          mkdir -p external/lib external/include/SDL2
+          cp SDL2-2.30.12/build-ios/Release-iphoneos/libSDL2.a external/lib/
+          cp -R SDL2-2.30.12/include/* external/include/SDL2/
+          echo "SDL2 for iOS ready."
+
+      - name: Configure CMake Xcode Project for iOS
+        env:
+          CONFIG: ${{ inputs.build_configuration || 'Release' }}
+        run: |
+          cmake -S . -B build-ios \
+            -G Xcode \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/ios.toolchain.cmake \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DOPENBOR_BUNDLE_IDENTIFIER="org.openbor.engine" \
+            -DCMAKE_INCLUDE_PATH="${GITHUB_WORKSPACE}/external/include" \
+            -DCMAKE_LIBRARY_PATH="${GITHUB_WORKSPACE}/external/lib" \
+            -DCMAKE_BUILD_TYPE="${CONFIG}"
+
+      - name: Compile OpenBOR iOS App (ARM64)
+        env:
+          CONFIG: ${{ inputs.build_configuration || 'Release' }}
+        run: |
+          xcodebuild -project build-ios/OpenBOR.xcodeproj \
+            -scheme OpenBOR \
+            -configuration "${CONFIG}" \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Code Signing (Optional / If Credentials Provided)
+        if: env.HAS_SECRETS == 'true'
+        env:
+          HAS_SECRETS: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' && secrets.PROVISIONING_PROFILE_BASE64 != '' }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          echo "Setting up temporary Keychain for code signing..."
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 12)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+
+          APP_PATH=$(find build-ios -type d -name "OpenBOR.app" | head -n 1)
+          cp "$PROFILE_PATH" "$APP_PATH/embedded.mobileprovision"
+
+          SIGN_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | head -n 1 | awk '{print $2}')
+          echo "Signing with identity: $SIGN_IDENTITY"
+          codesign --force --sign "$SIGN_IDENTITY" --timestamp=none "$APP_PATH"
+
+      - name: Package iOS Application into IPA
+        run: |
+          APP_PATH=$(find build-ios -type d -name "OpenBOR.app" | head -n 1)
+          echo "Packaging App Bundle from: ${APP_PATH}"
+
+          mkdir -p build-ios/Package/Payload
+          cp -R "${APP_PATH}" build-ios/Package/Payload/
+
+          cd build-ios/Package
+          zip -qr -y ../OpenBOR-v3.0-Build6391-iOS.ipa Payload
+          cd ../..
+
+          ls -lh build-ios/OpenBOR-v3.0-Build6391-iOS.ipa
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenBOR-v3.0-Build6391-iOS-IPA
+          path: build-ios/OpenBOR-v3.0-Build6391-iOS.ipa
+          if-no-files-found: error

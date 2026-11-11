@@ -28,6 +28,11 @@
 #include "videocommon.h"
 #include "../resources/OpenBOR_Icon_32x32_png.h"
 
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+#include "ios_paths.h"
+#include "touchcontrols.h"
+#endif
+
 SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
 static SDL_Texture *texture = NULL;
@@ -58,6 +63,11 @@ void initSDL()
 		borExit(0);
 	}
 	SDL_ShowCursor(SDL_DISABLE);
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+	savedata.fullscreen = 1;
+#endif
 	//atexit(SDL_Quit); //White Dragon: use SDL_Quit() into sdlport.c it's best practice!
 
 #ifdef LOADGL
@@ -143,7 +153,11 @@ int SetVideoMode(int w, int h, int bpp, bool gl)
 
 	if(!gl)
 	{
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+		renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+#else
 		renderer = SDL_CreateRenderer(window, -1, 0);
+#endif
 		if(!renderer)
 		{
 			printf("Error: failed to create renderer: %s\n", SDL_GetError());
@@ -196,6 +210,16 @@ int video_set_mode(s_videomodes videomodes)
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	video_stretch(savedata.stretch);
 
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+	int outW = 0, outH = 0;
+	SDL_GetRendererOutputSize(renderer, &outW, &outH);
+	if (outW <= 0 || outH <= 0) { outW = nativeWidth; outH = nativeHeight; }
+	touch_init(renderer, outW, outH);
+	float sTop = 0, sBottom = 0, sLeft = 0, sRight = 0;
+	ios_get_safe_area_insets(&sTop, &sBottom, &sLeft, &sRight);
+	touch_update_layout(outW, outH, sLeft, sRight, sTop, sBottom);
+#endif
+
 	return 1;
 }
 
@@ -211,13 +235,39 @@ void blit()
 {
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 	SDL_RenderClear(renderer);
+
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+	int outW = 0, outH = 0;
+	SDL_GetRendererOutputSize(renderer, &outW, &outH);
+	if (outW <= 0 || outH <= 0) { outW = nativeWidth; outH = nativeHeight; }
+
+	float aspectRatio = (float)stored_videomodes.hRes / (float)stored_videomodes.vRes;
+	float newWidth = (float)outH * aspectRatio;
+	float newHeight = (float)outH;
+	if (newWidth > (float)outW) {
+		newWidth = (float)outW;
+		newHeight = (float)outW / aspectRatio;
+	}
+	SDL_Rect dst_rect = {
+		(int)(((float)outW - newWidth) / 2.0f),
+		(int)(((float)outH - newHeight) / 2.0f),
+		(int)newWidth,
+		(int)newHeight
+	};
+	SDL_RenderCopy(renderer, texture, NULL, &dst_rect);
+#else
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
+#endif
 
 	if (brightness > 0)
 		SDL_SetRenderDrawColor(renderer, 255, 255, 255, brightness-1);
 	else if (brightness < 0)
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, (-brightness)-1);
 	SDL_RenderFillRect(renderer, NULL);
+
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+	touch_render(renderer);
+#endif
 
 	SDL_RenderPresent(renderer);
 }

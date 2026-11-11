@@ -34,6 +34,8 @@ extern s_playercontrols default_control;
 extern int nativeWidth;
 extern int nativeHeight;
 static TouchStatus touch_info;
+#elif defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+#include "touchcontrols.h"
 #endif
 
 /*
@@ -111,6 +113,39 @@ void getPads(Uint8* keystate, Uint8* keystate_def)
 				}
 				control_update_android_touch(&touch_info, MAX_POINTERS, keystate, keystate_def);
 			}
+				break;
+#endif
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+			case SDL_FINGERDOWN:
+				touch_set_visible(1);
+				touch_handle_event(&ev);
+				break;
+			case SDL_FINGERUP:
+			case SDL_FINGERMOTION:
+				touch_handle_event(&ev);
+				break;
+			case SDL_JOYBUTTONDOWN:
+				touch_set_visible(0);
+				break;
+			case SDL_APP_WILLENTERBACKGROUND:
+			case SDL_APP_DIDENTERBACKGROUND:
+				break;
+			case SDL_APP_WILLENTERFOREGROUND:
+			case SDL_APP_DIDENTERFOREGROUND:
+			{
+				extern void borTimerInit(void);
+				extern SDL_Renderer *renderer;
+				extern int nativeWidth, nativeHeight;
+				borTimerInit();
+				float sTop = 0, sBottom = 0, sLeft = 0, sRight = 0;
+				ios_get_safe_area_insets(&sTop, &sBottom, &sLeft, &sRight);
+				int outW = 0, outH = 0;
+				if (renderer) SDL_GetRendererOutputSize(renderer, &outW, &outH);
+				if (outW <= 0 || outH <= 0) { outW = nativeWidth; outH = nativeHeight; }
+				touch_update_layout(outW, outH, sLeft, sRight, sTop, sBottom);
+			}
+				break;
+			case SDL_APP_LOWMEMORY:
 				break;
 #endif
 #if 0
@@ -312,6 +347,10 @@ void getPads(Uint8* keystate, Uint8* keystate_def)
 		}
 	}
 
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+	touch_apply_inputs(keystate);
+	touch_apply_inputs(keystate_def);
+#endif
 }
 
 /*

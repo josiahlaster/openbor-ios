@@ -7,7 +7,12 @@
  */
 
 #include <png.h>
+#if defined(__APPLE__) || defined(DARWIN)
+#include <stdlib.h>
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include "globals.h"
 #include "screen.h"
 

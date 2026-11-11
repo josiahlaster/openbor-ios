@@ -18,9 +18,13 @@
 
 #include "globals.h"
 
-#if GP2X || LINUX || OPENDINGUX || SYMBIAN
+#if GP2X || LINUX || OPENDINGUX || SYMBIAN || DARWIN || defined(__APPLE__)
+#ifndef stricmp
 #define stricmp  strcasecmp
+#endif
+#ifndef strnicmp
 #define strnicmp strncasecmp
+#endif
 #endif
 
 #if SDL_VERSION_ATLEAST(2,0,0)

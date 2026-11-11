@@ -22,6 +22,9 @@ const char* ios_get_caches_dir(void);
 // Creates Documents/Paks, Documents/Saves, Documents/Logs, Documents/ScreenShots
 void ios_init_paths(char *paks, char *saves, char *logs, char *screenshots);
 
+// Copies any bundled .pak files from the app bundle to Documents/Paks if not already present
+void ios_sync_bundle_paks(const char *documentsPaksDir);
+
 // Returns the device display safe area insets in points
 void ios_get_safe_area_insets(float *top, float *bottom, float *left, float *right);
 

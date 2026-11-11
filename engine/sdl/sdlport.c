@@ -16,7 +16,10 @@
 
 #undef usleep
 
-#ifdef DARWIN
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+#include "ios_paths.h"
+#include <CoreFoundation/CoreFoundation.h>
+#elif defined(DARWIN)
 #include <CoreFoundation/CoreFoundation.h>
 #elif WIN
 #undef main
@@ -76,7 +79,10 @@ int main(int argc, char *argv[])
 	struct sigaction sigact;
 #endif
 
-#ifdef DARWIN
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+	ios_init_paths(paksDir, savesDir, logsDir, screenShotsDir);
+	chdir(ios_get_documents_dir());
+#elif defined(DARWIN)
 	char resourcePath[PATH_MAX] = {""};
 	CFBundleRef mainBundle;
 	CFURLRef resourcesDirectoryURL;

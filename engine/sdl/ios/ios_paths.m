@@ -84,6 +84,44 @@ void ios_init_paths(char *paks, char *saves, char *logs, char *screenshots)
     snprintf(buf, sizeof(buf), "%s/ScreenShots", docRoot);
     ensure_directory(buf);
     if (screenshots) strncpy(screenshots, buf, 255);
+
+    // Sync any bundled .pak files from app bundle to Documents/Paks
+    ios_sync_bundle_paks(paks);
+}
+
+void ios_sync_bundle_paks(const char *documentsPaksDir)
+{
+    if (!documentsPaksDir) return;
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSString *bundlePath = [[NSBundle mainBundle] resourcePath];
+    if (!bundlePath) return;
+
+    NSString *bundlePaks = [bundlePath stringByAppendingPathComponent:@"Paks"];
+    NSString *destDir = [NSString stringWithUTF8String:documentsPaksDir];
+
+    // Check bundle /Paks folder
+    BOOL isDir = NO;
+    if ([fm fileExistsAtPath:bundlePaks isDirectory:&isDir] && isDir) {
+        NSArray *contents = [fm contentsOfDirectoryAtPath:bundlePaks error:nil];
+        for (NSString *item in contents) {
+            if ([[[item pathExtension] lowercaseString] isEqualToString:@"pak"]) {
+                NSString *srcFile = [bundlePaks stringByAppendingPathComponent:item];
+                NSString *dstFile = [destDir stringByAppendingPathComponent:item];
+                if (![fm fileExistsAtPath:dstFile]) {
+                    [fm copyItemAtPath:srcFile toPath:dstFile error:nil];
+                }
+            }
+        }
+    }
+
+    // Check bundle root for bor.pak
+    NSString *rootPak = [bundlePath stringByAppendingPathComponent:@"bor.pak"];
+    if ([fm fileExistsAtPath:rootPak]) {
+        NSString *dstFile = [destDir stringByAppendingPathComponent:@"bor.pak"];
+        if (![fm fileExistsAtPath:dstFile]) {
+            [fm copyItemAtPath:rootPak toPath:dstFile error:nil];
+        }
+    }
 }
 
 void ios_get_safe_area_insets(float *top, float *bottom, float *left, float *right)
@@ -142,6 +180,11 @@ void ios_init_paths(char *paks, char *saves, char *logs, char *screenshots)
     if (saves) strncpy(saves, "Saves", 255);
     if (logs) strncpy(logs, "Logs", 255);
     if (screenshots) strncpy(screenshots, "ScreenShots", 255);
+}
+
+void ios_sync_bundle_paks(const char *documentsPaksDir)
+{
+    (void)documentsPaksDir;
 }
 
 void ios_get_safe_area_insets(float *top, float *bottom, float *left, float *right)

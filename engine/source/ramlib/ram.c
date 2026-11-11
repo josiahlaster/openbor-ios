@@ -36,7 +36,12 @@
 #include <stdlib.h>
 #endif
 
+#if defined(__APPLE__) || defined(DARWIN)
+#include <stdlib.h>
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <stdio.h>
 #include "globals.h"

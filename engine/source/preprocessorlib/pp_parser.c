@@ -19,7 +19,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <time.h>
+#if defined(__APPLE__) || defined(DARWIN)
+#include <malloc/malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <errno.h>
 #include "List.h"
 #include "pp_parser.h"
