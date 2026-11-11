@@ -138,6 +138,11 @@ set(SDL_PLATFORM_SOURCES
     sdl/SDL2_framerate.c
 )
 
+set(WEBMLIB_SOURCES
+    source/webmlib/yuv.c
+    source/webmlib/samplecvt.c
+)
+
 # Platform-specific sources
 if(OPENBOR_PLATFORM STREQUAL "IOS")
     set(PLATFORM_SPECIFIC_SOURCES
@@ -167,6 +172,7 @@ set(OPENBOR_ALL_SOURCES
     ${RANDLIB_SOURCES}
     ${SCRIPTLIB_SOURCES}
     ${SDL_PLATFORM_SOURCES}
+    ${WEBMLIB_SOURCES}
     ${PLATFORM_SPECIFIC_SOURCES}
 )
 
@@ -195,6 +201,7 @@ target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/source/ramlib
     ${CMAKE_CURRENT_SOURCE_DIR}/source/randlib
     ${CMAKE_CURRENT_SOURCE_DIR}/source/scriptlib
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/webmlib
     ${CMAKE_CURRENT_SOURCE_DIR}/resources
     ${CMAKE_CURRENT_SOURCE_DIR}/android/jni/openbor/include
     ${CMAKE_CURRENT_SOURCE_DIR}/android/jni/openbor/include/sdl
