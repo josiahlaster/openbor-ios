@@ -38,13 +38,11 @@ jobs:
           echo "Fetching SDL2 2.30.12 for iOS..."
           curl -sSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.12/SDL2-2.30.12.tar.gz -o SDL2.tar.gz
           tar -xzf SDL2.tar.gz
-          cd SDL2-2.30.12
 
-          echo "Compiling SDL2 iOS static library..."
-          mkdir -p build-ios && cd build-ios
-          cmake .. \
-            -G Xcode \
-            -DCMAKE_TOOLCHAIN_FILE=../../cmake/ios.toolchain.cmake \
+          echo "Compiling SDL2 iOS static library with Ninja..."
+          cmake -S SDL2-2.30.12 -B SDL2-build \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/ios.toolchain.cmake \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
@@ -54,16 +52,10 @@ jobs:
             -DSDL_TEST=OFF \
             -DCMAKE_BUILD_TYPE=Release
 
-          xcodebuild -project SDL2.xcodeproj \
-            -scheme SDL2-static \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+          cmake --build SDL2-build --parallel
 
-          cd ../..
           mkdir -p external/lib external/include/SDL2
-          cp SDL2-2.30.12/build-ios/Release-iphoneos/libSDL2.a external/lib/
+          cp SDL2-build/libSDL2.a external/lib/
           cp -R SDL2-2.30.12/include/* external/include/SDL2/
           echo "SDL2 for iOS ready."
 
