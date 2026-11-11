@@ -68,6 +68,12 @@ mkdir -p "${PACKAGE_DIR}/Payload"
 
 cp -R "${APP_PATH}" "${PACKAGE_DIR}/Payload/"
 
+# Ensure bundled PAKs are present inside App bundle
+if [ -d "${ROOT_DIR}/engine/resources/ios/Paks" ]; then
+  mkdir -p "${PACKAGE_DIR}/Payload/OpenBOR.app/Paks"
+  cp -f "${ROOT_DIR}/engine/resources/ios/Paks/"*.pak "${PACKAGE_DIR}/Payload/OpenBOR.app/Paks/" 2>/dev/null || true
+fi
+
 (cd "${PACKAGE_DIR}" && zip -qr -y "${BUILD_DIR}/OpenBOR.ipa" Payload)
 
 echo ""

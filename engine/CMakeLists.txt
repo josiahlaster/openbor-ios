@@ -259,6 +259,16 @@ if(OPENBOR_PLATFORM STREQUAL "IOS")
         XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "YES"
     )
 
+    # Bundle game PAK files if present
+    file(GLOB BUNDLE_PAKS "${CMAKE_CURRENT_SOURCE_DIR}/resources/ios/Paks/*.pak")
+    if(BUNDLE_PAKS)
+        target_sources(${TARGET_NAME} PRIVATE ${BUNDLE_PAKS})
+        set_source_files_properties(${BUNDLE_PAKS} PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources/Paks"
+        )
+        message(STATUS "Found bundled iOS PAK files: ${BUNDLE_PAKS}")
+    endif()
+
     # Link iOS system frameworks
     target_link_libraries(${TARGET_NAME} PRIVATE
         "-framework UIKit"

@@ -135,6 +135,11 @@ jobs:
           mkdir -p build-ios/Package/Payload
           cp -R "${APP_PATH}" build-ios/Package/Payload/
 
+          if [ -d "engine/resources/ios/Paks" ]; then
+            mkdir -p build-ios/Package/Payload/OpenBOR.app/Paks
+            cp -f engine/resources/ios/Paks/*.pak build-ios/Package/Payload/OpenBOR.app/Paks/ 2>/dev/null || true
+          fi
+
           cd build-ios/Package
           zip -qr -y ../OpenBOR-v3.0-Build6391-iOS.ipa Payload
           cd ../..
