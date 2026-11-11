@@ -308,7 +308,7 @@ void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int
                        "\n*            Shutting Down            *\n\n");
         writeToLogFile("Out of memory!\n");
         writeToLogFile("Allocation of size %i failed in function '%s' at %s:%i.\n", size, func, file, line);
-#ifndef WIN
+#if !defined(WIN) && !defined(__APPLE__) && !defined(DARWIN)
         writeToLogFile("Memory usage at exit: %u\n", mallinfo().arena);
 #endif
         borExit(2);
