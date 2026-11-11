@@ -232,15 +232,11 @@ if(OPENBOR_PLATFORM STREQUAL "IOS")
         OV_EXCLUDE_STATIC_CALLBACKS=1
     )
 
-    set(OPENBOR_BUNDLE_IDENTIFIER "org.openbor.engine" CACHE STRING "iOS App Bundle Identifier")
+    set(OPENBOR_BUNDLE_IDENTIFIER "com.openbor.beatdown" CACHE STRING "iOS App Bundle Identifier")
+    set(OPENBOR_BUNDLE_NAME "Beatdown" CACHE STRING "iOS App Bundle Display Name")
+    set(OPENBOR_BUNDLE_EXECUTABLE "Beatdown" CACHE STRING "iOS App Executable Name")
 
     # Generate iOS Info.plist
-    set(MACOSX_BUNDLE_EXECUTABLE_NAME "OpenBOR")
-    set(MACOSX_BUNDLE_GUI_IDENTIFIER "${OPENBOR_BUNDLE_IDENTIFIER}")
-    set(MACOSX_BUNDLE_BUNDLE_NAME "OpenBOR")
-    set(MACOSX_BUNDLE_SHORT_VERSION_STRING "3.0")
-    set(MACOSX_BUNDLE_BUNDLE_VERSION "6391")
-
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/ios/Info.plist.in"
         "${CMAKE_CURRENT_BINARY_DIR}/Info.plist"
