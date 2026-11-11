@@ -29,50 +29,18 @@ jobs:
         run: |
           xcodebuild -version
 
-      - name: Install System Build Dependencies
-        run: |
-          brew install cmake ninja
-
-      - name: Setup SDL2 for iOS
-        run: |
-          echo "Fetching SDL2 2.30.12 for iOS..."
-          curl -sSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.12/SDL2-2.30.12.tar.gz -o SDL2.tar.gz
-          tar -xzf SDL2.tar.gz
-
-          echo "Compiling SDL2 iOS static library with Ninja..."
-          cmake -S SDL2-2.30.12 -B SDL2-build \
-            -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=cmake/ios.toolchain.cmake \
-            -DCMAKE_SYSTEM_NAME=iOS \
-            -DCMAKE_OSX_SYSROOT=iphoneos \
-            -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-            -DSDL_STATIC=ON \
-            -DSDL_SHARED=OFF \
-            -DSDL_TEST=OFF \
-            -DCMAKE_BUILD_TYPE=Release
-
-          cmake --build SDL2-build --parallel
-
-          mkdir -p external/lib external/include/SDL2
-          cp SDL2-build/libSDL2.a external/lib/
-          cp -R SDL2-2.30.12/include/* external/include/SDL2/
-          echo "SDL2 for iOS ready."
-
       - name: Configure CMake Xcode Project for iOS
         env:
           CONFIG: ${{ inputs.build_configuration || 'Release' }}
         run: |
           cmake -S . -B build-ios \
             -G Xcode \
-            -DCMAKE_TOOLCHAIN_FILE=cmake/ios.toolchain.cmake \
+            -DCMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/ios.toolchain.cmake" \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-            -DOPENBOR_BUNDLE_IDENTIFIER="org.openbor.engine" \
-            -DCMAKE_INCLUDE_PATH="${GITHUB_WORKSPACE}/external/include" \
-            -DCMAKE_LIBRARY_PATH="${GITHUB_WORKSPACE}/external/lib" \
+            -DOPENBOR_BUNDLE_IDENTIFIER="com.openbor.beatdown" \
             -DCMAKE_BUILD_TYPE="${CONFIG}"
 
       - name: Compile OpenBOR iOS App (ARM64)
