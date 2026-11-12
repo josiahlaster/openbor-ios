@@ -35,6 +35,7 @@ extern int nativeWidth;
 extern int nativeHeight;
 static TouchStatus touch_info;
 #elif defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+#include "ios_paths.h"
 #include "touchcontrols.h"
 #endif
 
@@ -124,9 +125,6 @@ void getPads(Uint8* keystate, Uint8* keystate_def)
 			case SDL_FINGERMOTION:
 				touch_handle_event(&ev);
 				break;
-			case SDL_JOYBUTTONDOWN:
-				touch_set_visible(0);
-				break;
 			case SDL_APP_WILLENTERBACKGROUND:
 			case SDL_APP_DIDENTERBACKGROUND:
 				break;
@@ -206,6 +204,9 @@ void getPads(Uint8* keystate, Uint8* keystate_def)
 				break;
 
 			case SDL_JOYBUTTONDOWN:
+#if defined(IOS) || defined(__IPHONEOS__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+				touch_set_visible(0);
+#endif
 				// FIXME: restore GP2X controls
 				for(i=0; i<JOY_LIST_TOTAL; i++)
 				{
